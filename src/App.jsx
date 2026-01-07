@@ -1,11 +1,13 @@
+// RULE: Firestore Rules must be open (Test Mode) for this to work
+// allow read, write: if true;
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { initializeApp } from 'firebase/app';
 import { 
   getFirestore, collection, query, onSnapshot, addDoc, doc, updateDoc, deleteDoc 
 } from 'firebase/firestore';
-import { 
-  getAuth, signInAnonymously, onAuthStateChanged 
-} from 'firebase/auth';
+// Auth imports removed
+
 import { 
   Search, FileText, ChevronRight, GraduationCap, X, 
   TrendingUp, Book, Database, Menu, Plus, Settings, 
@@ -26,7 +28,7 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
+// const auth = getAuth(app); // REMOVED
 const db = getFirestore(app);
 const appId = 'bpsc-vault-v3'; 
 
@@ -42,7 +44,7 @@ const NAV_SECTIONS = [
 ];
 
 const App = () => {
-  const [user, setUser] = useState(null);
+  // Removed user state
   const [activeTab, setActiveTab] = useState('mains-gs1');
   const [isAdminMode, setIsAdminMode] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -56,28 +58,11 @@ const App = () => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [editData, setEditData] = useState({ title: '', section: 'mains-gs1', trend: '', studyLink: '', questions: [] });
 
-  // 1. Auth Logic
-  useEffect(() => {
-    const initAuth = async () => {
-      try {
-        await signInAnonymously(auth);
-      } catch (err) {
-        console.error("Auth failed:", err);
-        // Even if auth fails, we stop loading to show error/empty state
-        setIsLoading(false);
-      }
-    };
-    initAuth();
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      if (!currentUser) setIsLoading(false); // Stop loading if no user
-    });
-    return () => unsubscribe();
-  }, []);
+  // 1. Auth Logic REMOVED - Direct Data Access
 
   // 2. Data Logic
   useEffect(() => {
-    if (!user) return;
+    // Removed user check
     setIsLoading(true);
     const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'topics'));
     
@@ -91,7 +76,7 @@ const App = () => {
     });
     
     return () => unsubscribe();
-  }, [user]);
+  }, []); // Run once on mount
 
   // Filter Logic
   const filteredTopics = useMemo(() => {
@@ -101,7 +86,7 @@ const App = () => {
 
   // Database Actions
   const handleSaveTopic = async () => {
-    if (!user) return;
+    // Removed user check
     try {
       const topicToSave = { ...editData };
       delete topicToSave.id;
@@ -114,15 +99,19 @@ const App = () => {
       setIsEditorOpen(false);
     } catch (e) { 
       console.error("Save error:", e);
+      alert("Error saving. Check Firestore Rules (must be open/test mode).");
     }
   };
 
   const handleDelete = async (id) => {
-    if (!user) return;
+    // Removed user check
     if (window.confirm("Delete this entire topic card?")) {
       try {
         await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'topics', id));
-      } catch (e) { console.error("Delete error:", e); }
+      } catch (e) { 
+        console.error("Delete error:", e);
+        alert("Error deleting. Check Firestore Rules.");
+      }
     }
   };
 
