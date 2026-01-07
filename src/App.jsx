@@ -13,9 +13,15 @@ import {
 } from 'lucide-react';
 
 // --- FIREBASE SETUP ---
-const firebaseConfig = typeof __firebase_config !== 'undefined' 
-  ? JSON.parse(__firebase_config) 
-  : { apiKey: "", authDomain: "", projectId: "", storageBucket: "", messagingSenderId: "", appId: "" };
+const firebaseConfig = {
+  apiKey: "AIzaSyBVV7UqGoUZiwMe__0_x7-mZGxm5w0wBh0",
+  authDomain: "pushtak-mart.firebaseapp.com",
+  projectId: "pushtak-mart",
+  storageBucket: "pushtak-mart.firebasestorage.app",
+  messagingSenderId: "962723938970",
+  appId: "1:962723938970:web:fe3612fd8d0f85a6c69523",
+  measurementId: "G-Q7YYZ3YCX4"
+};
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
