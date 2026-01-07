@@ -9,7 +9,8 @@ import {
 import { 
   Search, FileText, ChevronRight, GraduationCap, X, 
   TrendingUp, Book, Database, Menu, Plus, Settings, 
-  Trash2, Layers, Layout, BookOpen, UserCircle, Eye, Edit3, Save, Lock, Loader2
+  Trash2, Layers, Layout, BookOpen, UserCircle, Eye, Edit3, Save, Lock, Loader2,
+  AlertCircle
 } from 'lucide-react';
 
 // --- FIREBASE SETUP ---
@@ -27,7 +28,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-const appId = 'bpsc-vault-v3'; // Hardcoded for consistency
+const appId = 'bpsc-vault-v3'; 
 
 const NAV_SECTIONS = [
   { id: 'prelims-gs', label: 'Prelims GS', icon: Layers },
@@ -62,10 +63,15 @@ const App = () => {
         await signInAnonymously(auth);
       } catch (err) {
         console.error("Auth failed:", err);
+        // Even if auth fails, we stop loading to show error/empty state
+        setIsLoading(false);
       }
     };
     initAuth();
-    const unsubscribe = onAuthStateChanged(auth, setUser);
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      if (!currentUser) setIsLoading(false); // Stop loading if no user
+    });
     return () => unsubscribe();
   }, []);
 
@@ -136,8 +142,8 @@ const App = () => {
               <GraduationCap size={20} />
             </div>
             <div>
-              <h1 className="text-lg font-bold tracking-tight">Pushtak Mart</h1>
-              <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Exam Vault</p>
+              <h1 className="text-lg font-bold tracking-tight text-indigo-900">BPSC VAULT</h1>
+              <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Exam Readiness</p>
             </div>
           </div>
           <button onClick={() => setIsMobileMenuOpen(false)} className="md:hidden text-slate-400"><X size={20}/></button>
@@ -151,7 +157,7 @@ const App = () => {
               <button 
                 key={sec.id}
                 onClick={() => { setActiveTab(sec.id); setIsMobileMenuOpen(false); }}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${isActive ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${isActive ? 'bg-indigo-50 text-indigo-700 shadow-sm' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}
               >
                 <Icon size={18} className={isActive ? 'text-indigo-600' : 'text-slate-400'} /> 
                 {sec.label}
@@ -165,7 +171,7 @@ const App = () => {
             onClick={() => setIsAdminMode(!isAdminMode)}
             className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-bold transition-all border ${isAdminMode ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-slate-100 text-slate-600 border-slate-200'}`}
           >
-            {isAdminMode ? <><Eye size={14}/> EXIT ADMIN</> : <><Lock size={14}/> ADMIN LOGIN</>}
+            {isAdminMode ? <><Eye size={14}/> STUDENT VIEW</> : <><Lock size={14}/> ADMIN LOGIN</>}
           </button>
         </div>
       </aside>
@@ -174,7 +180,7 @@ const App = () => {
       <main className="flex-1 flex flex-col min-w-0">
         
         {/* HEADER */}
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-8 sticky top-0 z-30">
+        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-8 sticky top-0 z-30 shadow-sm">
           <div className="flex items-center gap-4">
             <button onClick={() => setIsMobileMenuOpen(true)} className="md:hidden p-2 text-slate-500 hover:bg-slate-100 rounded-lg">
               <Menu size={20} />
@@ -185,12 +191,12 @@ const App = () => {
           </div>
 
           <div className="flex items-center gap-3 w-full max-w-md justify-end">
-            <div className="relative w-full max-w-xs">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+            <div className="relative w-full max-w-xs group">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={16} />
               <input 
                 type="text" 
                 placeholder="Search topics..." 
-                className="w-full pl-10 pr-4 py-2 bg-slate-100 border-none rounded-full text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                className="w-full pl-10 pr-4 py-2.5 bg-slate-100 border-2 border-transparent rounded-full text-sm focus:bg-white focus:border-indigo-100 focus:ring-4 focus:ring-indigo-50/50 outline-none transition-all"
                 value={searchTerm} 
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -198,7 +204,7 @@ const App = () => {
             {isAdminMode && (
               <button 
                 onClick={() => {setEditData({ title: '', section: activeTab, trend: '', studyLink: '', questions: [] }); setIsEditorOpen(true)}}
-                className="bg-indigo-600 text-white p-2 rounded-full hover:bg-indigo-700 transition-colors flex-shrink-0 shadow-lg shadow-indigo-200"
+                className="bg-indigo-600 text-white p-2.5 rounded-full hover:bg-indigo-700 transition-all flex-shrink-0 shadow-lg shadow-indigo-200 active:scale-95"
               >
                 <Plus size={20} />
               </button>
@@ -211,33 +217,49 @@ const App = () => {
           {isLoading ? (
             <div className="h-full flex flex-col items-center justify-center text-slate-400 gap-3">
               <Loader2 size={40} className="animate-spin text-indigo-600" />
-              <p className="text-sm font-medium">Loading Vault...</p>
+              <p className="text-sm font-medium animate-pulse">Loading BPSC Data...</p>
             </div>
           ) : filteredTopics.length === 0 ? (
-            <div className="h-64 flex flex-col items-center justify-center text-slate-400 gap-4 mt-10">
-              <div className="p-4 bg-slate-100 rounded-full"><Database size={32} /></div>
-              <p className="text-sm">No topics found in this section yet.</p>
-              {isAdminMode && <p className="text-xs text-indigo-600">Click + to add the first topic!</p>}
+            <div className="h-[60vh] flex flex-col items-center justify-center text-slate-400 gap-4">
+              <div className="p-6 bg-slate-100 rounded-full text-slate-300">
+                <AlertCircle size={48} />
+              </div>
+              <div className="text-center space-y-1">
+                <h3 className="text-lg font-bold text-slate-600">No Data Found</h3>
+                <p className="text-sm">There are no topics in this section yet.</p>
+              </div>
+              {isAdminMode ? (
+                <button 
+                  onClick={() => {setEditData({ title: '', section: activeTab, trend: '', studyLink: '', questions: [] }); setIsEditorOpen(true)}}
+                  className="mt-4 px-6 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all"
+                >
+                  Create First Topic
+                </button>
+              ) : (
+                <button onClick={() => setSearchTerm('')} className="text-indigo-600 text-sm font-bold hover:underline">
+                  Clear Search Filters
+                </button>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 max-w-7xl mx-auto">
               {filteredTopics.map((topic) => (
-                <div key={topic.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden flex flex-col">
+                <div key={topic.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden flex flex-col group">
                   {/* Card Header */}
-                  <div className="p-6 border-b border-slate-50 relative">
+                  <div className="p-6 border-b border-slate-50 relative bg-gradient-to-br from-white to-slate-50">
                     {isAdminMode && (
                       <div className="absolute top-4 right-4 flex gap-2">
-                        <button onClick={() => {setEditData(topic); setIsEditorOpen(true)}} className="p-2 bg-slate-50 text-slate-600 rounded-lg hover:bg-blue-50 hover:text-blue-600"><Edit3 size={14}/></button>
-                        <button onClick={() => handleDelete(topic.id)} className="p-2 bg-slate-50 text-slate-600 rounded-lg hover:bg-rose-50 hover:text-rose-600"><Trash2 size={14}/></button>
+                        <button onClick={() => {setEditData(topic); setIsEditorOpen(true)}} className="p-2 bg-white border border-slate-100 text-slate-600 rounded-lg hover:bg-blue-50 hover:text-blue-600 shadow-sm"><Edit3 size={14}/></button>
+                        <button onClick={() => handleDelete(topic.id)} className="p-2 bg-white border border-slate-100 text-slate-600 rounded-lg hover:bg-rose-50 hover:text-rose-600 shadow-sm"><Trash2 size={14}/></button>
                       </div>
                     )}
-                    <h3 className="text-xl font-bold text-slate-800 mb-4 pr-16">{topic.title}</h3>
+                    <h3 className="text-xl font-bold text-slate-800 mb-4 pr-20 leading-tight">{topic.title}</h3>
                     <div className="flex gap-2">
-                      <button onClick={() => setSelectedTrend(topic)} className="flex-1 py-2 px-4 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-slate-800 flex items-center justify-center gap-2">
+                      <button onClick={() => setSelectedTrend(topic)} className="flex-1 py-2.5 px-4 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-slate-800 flex items-center justify-center gap-2 shadow-lg shadow-slate-200 transition-all active:scale-95">
                         <TrendingUp size={14} /> ANALYSIS
                       </button>
                       {topic.studyLink && (
-                        <a href={topic.studyLink} target="_blank" rel="noreferrer" className="flex-1 py-2 px-4 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-bold hover:bg-indigo-100 flex items-center justify-center gap-2">
+                        <a href={topic.studyLink} target="_blank" rel="noreferrer" className="flex-1 py-2.5 px-4 bg-indigo-50 text-indigo-700 rounded-xl text-xs font-bold hover:bg-indigo-100 flex items-center justify-center gap-2 border border-indigo-100 transition-all active:scale-95">
                           <BookOpen size={14} /> NOTES
                         </a>
                       )}
@@ -246,16 +268,19 @@ const App = () => {
 
                   {/* Questions List */}
                   <div className="p-6 bg-slate-50/50 flex-1 space-y-3">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Previous Year Questions</p>
+                    <div className="flex items-center gap-2 mb-2">
+                      <Database size={12} className="text-indigo-400"/>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Question Bank</p>
+                    </div>
                     {topic.questions?.map((q, idx) => (
-                      <div key={idx} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm group hover:border-indigo-300 transition-colors">
+                      <div key={idx} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm group/item hover:border-indigo-300 hover:shadow-md transition-all">
                         <div className="flex justify-between items-start gap-3 mb-3">
                            <p className="text-sm text-slate-700 font-medium leading-relaxed">{q.q}</p>
-                           <span className="bg-slate-100 text-slate-500 text-[10px] font-bold px-2 py-1 rounded whitespace-nowrap">{q.year}</span>
+                           <span className="bg-slate-100 text-slate-500 text-[10px] font-bold px-2 py-1 rounded-md whitespace-nowrap border border-slate-200">{q.year}</span>
                         </div>
                         <button 
                           onClick={() => setSelectedSolution({ ...q, title: topic.title })}
-                          className="text-xs font-bold text-indigo-600 flex items-center gap-1 hover:underline"
+                          className="text-xs font-bold text-indigo-600 flex items-center gap-1 hover:underline decoration-2 underline-offset-2"
                         >
                           Show Solution <ChevronRight size={12} />
                         </button>
@@ -273,39 +298,39 @@ const App = () => {
         {/* EDITOR */}
         {isEditorOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-            <div className="bg-white w-full max-w-2xl max-h-[90vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+            <div className="bg-white w-full max-w-2xl max-h-[90vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95">
               <div className="p-4 border-b flex justify-between items-center bg-slate-50">
                 <h3 className="font-bold text-slate-800">Edit Topic</h3>
                 <button onClick={() => setIsEditorOpen(false)}><X size={20} className="text-slate-400 hover:text-slate-600"/></button>
               </div>
               <div className="p-6 overflow-y-auto space-y-4 flex-1">
-                <input placeholder="Title" className="w-full p-3 border rounded-lg" value={editData.title} onChange={e => setEditData({...editData, title: e.target.value})} />
-                <select className="w-full p-3 border rounded-lg" value={editData.section} onChange={e => setEditData({...editData, section: e.target.value})}>
+                <input placeholder="Title" className="w-full p-3 border rounded-lg bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-100 outline-none transition-all" value={editData.title} onChange={e => setEditData({...editData, title: e.target.value})} />
+                <select className="w-full p-3 border rounded-lg bg-slate-50 focus:bg-white outline-none" value={editData.section} onChange={e => setEditData({...editData, section: e.target.value})}>
                   {NAV_SECTIONS.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
                 </select>
-                <textarea placeholder="Trend Analysis" rows="3" className="w-full p-3 border rounded-lg" value={editData.trend} onChange={e => setEditData({...editData, trend: e.target.value})} />
-                <input placeholder="Link to Notes" className="w-full p-3 border rounded-lg" value={editData.studyLink} onChange={e => setEditData({...editData, studyLink: e.target.value})} />
+                <textarea placeholder="Trend Analysis" rows="3" className="w-full p-3 border rounded-lg bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-100 outline-none" value={editData.trend} onChange={e => setEditData({...editData, trend: e.target.value})} />
+                <input placeholder="Link to Notes" className="w-full p-3 border rounded-lg bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-100 outline-none" value={editData.studyLink} onChange={e => setEditData({...editData, studyLink: e.target.value})} />
                 
                 <div className="border-t pt-4 mt-4">
                   <div className="flex justify-between items-center mb-4">
                     <h4 className="font-bold text-sm">Questions</h4>
-                    <button onClick={() => setEditData({...editData, questions: [...(editData.questions || []), { q: '', year: '', solution: '' }]})} className="text-xs bg-indigo-50 text-indigo-600 px-3 py-1 rounded font-bold">+ Add</button>
+                    <button onClick={() => setEditData({...editData, questions: [...(editData.questions || []), { q: '', year: '', solution: '' }]})} className="text-xs bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-lg font-bold hover:bg-indigo-100 transition-colors">+ Add Question</button>
                   </div>
                   {editData.questions?.map((q, i) => (
-                    <div key={i} className="mb-4 p-4 bg-slate-50 rounded-lg border relative">
-                       <button onClick={() => { const qs = editData.questions.filter((_, idx) => idx !== i); setEditData({...editData, questions: qs}); }} className="absolute top-2 right-2 text-rose-500"><Trash2 size={14}/></button>
+                    <div key={i} className="mb-4 p-4 bg-slate-50 rounded-xl border border-slate-200 relative">
+                       <button onClick={() => { const qs = editData.questions.filter((_, idx) => idx !== i); setEditData({...editData, questions: qs}); }} className="absolute top-2 right-2 text-slate-300 hover:text-rose-500 transition-colors"><Trash2 size={16}/></button>
                        <div className="grid grid-cols-4 gap-2 mb-2">
-                         <input placeholder="Year" className="p-2 border rounded text-xs" value={q.year} onChange={e => { const qs = [...editData.questions]; qs[i].year = e.target.value; setEditData({...editData, questions: qs}); }} />
-                         <input placeholder="Question" className="col-span-3 p-2 border rounded text-xs" value={q.q} onChange={e => { const qs = [...editData.questions]; qs[i].q = e.target.value; setEditData({...editData, questions: qs}); }} />
+                         <input placeholder="Year" className="p-2 border rounded-lg text-xs" value={q.year} onChange={e => { const qs = [...editData.questions]; qs[i].year = e.target.value; setEditData({...editData, questions: qs}); }} />
+                         <input placeholder="Question" className="col-span-3 p-2 border rounded-lg text-xs" value={q.q} onChange={e => { const qs = [...editData.questions]; qs[i].q = e.target.value; setEditData({...editData, questions: qs}); }} />
                        </div>
-                       <textarea placeholder="Solution" className="w-full p-2 border rounded text-xs" value={q.solution} onChange={e => { const qs = [...editData.questions]; qs[i].solution = e.target.value; setEditData({...editData, questions: qs}); }} />
+                       <textarea placeholder="Solution" className="w-full p-2 border rounded-lg text-xs" value={q.solution} onChange={e => { const qs = [...editData.questions]; qs[i].solution = e.target.value; setEditData({...editData, questions: qs}); }} />
                     </div>
                   ))}
                 </div>
               </div>
               <div className="p-4 border-t bg-slate-50 flex justify-end gap-3">
-                <button onClick={() => setIsEditorOpen(false)} className="px-4 py-2 text-slate-500 font-medium">Cancel</button>
-                <button onClick={handleSaveTopic} className="px-6 py-2 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700">Save Changes</button>
+                <button onClick={() => setIsEditorOpen(false)} className="px-4 py-2 text-slate-500 font-medium hover:text-slate-700">Cancel</button>
+                <button onClick={handleSaveTopic} className="px-6 py-2 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-200">Save Changes</button>
               </div>
             </div>
           </div>
@@ -324,7 +349,7 @@ const App = () => {
                    <p className="text-slate-700 leading-relaxed whitespace-pre-wrap">{selectedTrend.trend || "No analysis available."}</p>
                 ) : (
                    <div className="space-y-4">
-                     <div className="bg-indigo-50 p-4 rounded-lg text-sm text-indigo-900 font-medium">"{selectedSolution.q}"</div>
+                     <div className="bg-indigo-50 p-4 rounded-xl text-sm text-indigo-900 font-medium border border-indigo-100">"{selectedSolution.q}"</div>
                      <p className="text-slate-700 leading-relaxed whitespace-pre-wrap">{selectedSolution.solution || "Solution coming soon..."}</p>
                    </div>
                 )}
